@@ -76,6 +76,11 @@ label.lb { font-size: 15px; letter-spacing: .06em; color: var(--ink-2); }
 textarea { width: 100%; min-height: 64px; resize: vertical; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r);
   background: var(--surface); color: var(--ink); font: inherit; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.pick { display: grid; grid-template-columns: 44px 1fr; gap: 10px; align-items: center; }
+.pick > * { min-width: 0; }
+.pk { font-size: 15px; color: var(--ink-2); }
+.frame { font-size: 15.5px; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
+.q .note { display: block; margin-top: 2px; }
 .chip { border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 5px 14px; font-size: 15.5px; }
 .chip[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 
@@ -189,6 +194,9 @@ footer { margin-top: 48px; font-size: 14px; color: var(--ink-2); }
   .headline { grid-template-columns: 1fr; gap: 16px; }
   .next { grid-template-columns: 1fr; }
   .coin { width: 54px; height: 54px; }
+  .chips { gap: 6px; }
+  .chip { padding: 4px 10px; font-size: 15px; }
+  .pick { grid-template-columns: 36px 1fr; gap: 8px; }
   .name { font-size: 30px; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -218,7 +226,8 @@ footer { margin-top: 48px; font-size: 14px; color: var(--ink-2); }
     <div class="ask">
       <label class="lb" for="q">무엇이 궁금한가요?</label>
       <textarea id="q" placeholder="예) 이번 달에 이직 준비를 시작해도 될까?"></textarea>
-      <div class="chips" id="cats" role="group" aria-label="분야"></div>
+      <div class="pick"><span class="pk">기간</span><div class="chips" id="periods" role="group" aria-label="기간"></div></div>
+      <div class="pick"><span class="pk">분야</span><div class="chips" id="cats" role="group" aria-label="분야"></div></div>
     </div>
 
     <div class="toss">
@@ -359,6 +368,17 @@ const CATS = [
   { id:"love", label:"관계·연애" }, { id:"money", label:"돈" },
 ];
 const CAT_IDX = { work:5, love:6, money:7 };
+const PERIODS = [
+  { id:"day", label:"오늘", tip:"오늘 해볼 일", ahead:"오늘 안에", again:"같은 질문은 내일이나 상황이 바뀐 뒤에 다시 물어보세요.",
+    frame:"오늘 하루의 분위기로 읽으세요. 오늘의 작은 선택과 말, 태도에 적용하면 됩니다." },
+  { id:"week", label:"이번 주", tip:"이번 주를 위해 오늘 해볼 일", ahead:"이번 주 안에", again:"같은 질문은 다음 주나 상황이 바뀐 뒤에 다시 물어보세요.",
+    frame:"이번 주의 흐름으로 읽으세요. 이번 주에 정할 일, 만날 사람, 일정의 속도에 적용하세요." },
+  { id:"month", label:"이번 달", tip:"이번 달을 위해 오늘 해볼 일", ahead:"이번 달 안에", again:"같은 질문은 다음 달이나 상황이 바뀐 뒤에 다시 물어보세요.",
+    frame:"이번 달의 흐름으로 읽으세요. 한 달 동안 어느 방향으로, 어떤 속도로 갈지 정하는 데 쓰세요." },
+  { id:"year", label:"올해", tip:"올해를 위해 오늘 해볼 일", ahead:"올해 안에", again:"같은 질문은 내년이나 상황이 크게 바뀐 뒤에 다시 물어보세요.",
+    frame:"올해의 큰 흐름으로 읽으세요. 하루하루의 사건보다 한 해를 대하는 태도와 방향을 보여 줍니다." },
+];
+const periodOf = (id) => PERIODS.find((p) => p.id === id);
 const LINE_POS = [
   ["초효","시작","일이 막 시작된 단계, 아직 드러나지 않은 씨앗입니다. 조용히 준비하세요."],
   ["이효","기반","내 자리에서 실력을 쌓고 주변과 호응하는 단계. 협력이 열쇠입니다."],
@@ -444,9 +464,12 @@ function readingHTML(rec) {
   const answerFrom = chIdx.length >= 4 ? m : n;
   const a = D[answerFrom - 1];
   let h = '<div class="reading">';
-  if (rec.q) h += '<p class="q">' + esc(rec.q) + "</p>";
+  const P = periodOf(rec.p);
+  const catLabel = CATS.find((c) => c.id === cat).label;
+  if (rec.q || P) h += '<p class="q">' + (rec.q ? esc(rec.q) : "질문 없이 본 괘") + '<span class="note">' + (P ? P.label + " · " : "") + catLabel + "</span></p>";
   h += headHTML(n, hexHTML(valLines(vals)));
   h += '<p class="one">' + d[3] + '</p><p class="easy">' + d[4] + "</p>";
+  if (P) h += '<p class="frame">' + P.frame + "</p>";
   if (cat !== "all") {
     const lb = CATS.find((c) => c.id === cat).label;
     h += '<div class="answer"><span class="lb">' + lb + " · " + (answerFrom === n ? "지금의 답" : "앞으로의 답 (" + fullName(m).ko + ")") + "</span><p>" + a[CAT_IDX[cat]] + "</p></div>";
@@ -454,24 +477,25 @@ function readingHTML(rec) {
   } else {
     h += rowsHTML(n);
   }
-  h += '<p class="tip"><strong>오늘 해볼 일</strong><span>' + a[8] + "</span></p>";
+  h += '<p class="tip"><strong>' + (P ? P.tip : "오늘 해볼 일") + "</strong><span>" + a[8] + "</span></p>";
 
   h += '<div class="sec"><h3>변화의 열쇠</h3><p class="rule">' + ruleText(chIdx.length, chIdx) + "</p>";
   if (chIdx.length) {
     h += '<div class="keys">' + chIdx.map((i) => '<div class="key"><b>' + LINE_POS[i][0] + "</b><span><strong style=\"font-weight:500\">" + LINE_POS[i][1] + "</strong> · " + LINE_POS[i][2] + "</span></div>").join("") + "</div>";
-    h += '<div class="flow"><div class="st"><small>지금</small>' + fullName(n).ko + " · " + d[2] + '</div><span class="arrow">→</span><div class="st"><small>앞으로</small>' + fullName(m).ko + " · " + D[m - 1][2] + "</div></div>";
+    h += '<div class="flow"><div class="st"><small>지금</small>' + fullName(n).ko + " · " + d[2] + '</div><span class="arrow">→</span><div class="st"><small>앞으로' + (P ? " (" + P.ahead + ")" : "") + "</small>" + fullName(m).ko + " · " + D[m - 1][2] + "</div></div>";
     const md = D[m - 1];
     const mLines = nbits.map((b, i) => ({ yang: !!b, ch: chIdx.includes(i) }));
     h += '<div class="next">' + hexHTML(mLines, "md") + '<div><div class="num">변괘 · 제 ' + m + ' 괘</div><h3 class="name">' + fullName(m).ko + '<span class="hz">' + fullName(m).hz + "</span></h3><p>" + md[3] + "</p><p class=\"easy\">" + md[4] + "</p>" +
       (cat !== "all" ? "<p><span class=\"note\">" + CATS.find((c) => c.id === cat).label + "</span> " + md[CAT_IDX[cat]] + "</p>" : "") + "</div></div>";
   }
   h += "</div>";
+  if (P) h += '<p class="note">' + P.again + "</p>";
   h += '<p class="note">' + new Date(rec.t).toLocaleString("ko-KR", { dateStyle: "medium", timeStyle: "short" }) + " · 효 값(아래→위) " + vals.join(" ") + "</p>";
   return h + "</div>";
 }
 
 /* ---------- state ---------- */
-let cat = "all", cur = [], busy = false;
+let cat = "all", period = "day", cur = [], busy = false;
 const HKEY = "iljung-juyeok-hist";
 function loadHist() { try { return JSON.parse(localStorage.getItem(HKEY) || "[]"); } catch (e) { return []; } }
 function saveHist(list) { try { localStorage.setItem(HKEY, JSON.stringify(list.slice(0, 40))); } catch (e) {} }
@@ -484,6 +508,13 @@ $("#cats").addEventListener("click", (e) => {
   cat = b.dataset.c;
   document.querySelectorAll("#cats .chip").forEach((x) => x.setAttribute("aria-pressed", x === b));
 });
+
+$("#periods").innerHTML = PERIODS.map((p) => '<button class="chip" id="period-' + p.id + '" data-p="' + p.id + '" aria-pressed="' + (p.id === period) + '">' + p.label + "</button>").join("");
+function setPeriod(id) {
+  period = id;
+  document.querySelectorAll("#periods .chip").forEach((x) => x.setAttribute("aria-pressed", x.dataset.p === id));
+}
+$("#periods").addEventListener("click", (e) => { const b = e.target.closest("[data-p]"); if (b) setPeriod(b.dataset.p); });
 
 /* ---------- coins & building ---------- */
 const COIN = '<div class="coin"><span>常</span><span>平</span><span>通</span><span>寶</span></div>';
@@ -528,7 +559,7 @@ async function toss(times) {
   if (cur.length === 6) finish();
 }
 function finish() {
-  const rec = { t: Date.now(), q: $("#q").value.trim(), c: cat, v: cur.slice() };
+  const rec = { t: Date.now(), q: $("#q").value.trim(), c: cat, p: period, v: cur.slice() };
   hist.unshift(rec); saveHist(hist); drawHist();
   $("#result").innerHTML = readingHTML(rec);
   $("#result").scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
@@ -571,7 +602,7 @@ function drawHist() {
     const n = hexFromBits(bits), m = hexFromBits(nb);
     const t = new Date(r.t).toLocaleDateString("ko-KR", { month: "short", day: "numeric" });
     return '<button class="hrow" data-i="' + i + '">' + hexHTML(valLines(r.v), "sm") +
-      '<div><div class="t">' + t + " · " + CATS.find((c) => c.id === r.c).label + '</div><div class="qq">' + (r.q ? esc(r.q) : "질문 없이 본 괘") + "</div></div>" +
+      '<div><div class="t">' + t + " · " + (periodOf(r.p) ? periodOf(r.p).label + " · " : "") + CATS.find((c) => c.id === r.c).label + '</div><div class="qq">' + (r.q ? esc(r.q) : "질문 없이 본 괘") + "</div></div>" +
       '<span class="g">' + fullName(n).ko + (n !== m ? " → " + fullName(m).ko : "") + "</span></button>";
   }).join("") + '<div class="actions"><button class="btn ghost" id="clearHist">기록 모두 지우기</button><span class="note" id="clearMsg"></span></div>';
 }
@@ -612,12 +643,13 @@ function start(data) {
     document.querySelectorAll("#cats .chip").forEach((x) => x.setAttribute("aria-pressed", x.dataset.c === cat));
   }
   if (typeof data.q === "string") $("#q").value = data.q;
+  if (periodOf(data.period)) setPeriod(data.period);
   drawBuild(); drawGrid(""); drawHist();
   if (cur.length === 6 && data.rec) $("#result").innerHTML = readingHTML(data.rec);
   if (data.tab) showTab(data.tab);
 }
 window.claude?.hot?.snapshot?.(() => ({
-  cur, cat, q: $("#q").value, rec: cur.length === 6 ? hist[0] : null,
+  cur, cat, period, q: $("#q").value, rec: cur.length === 6 ? hist[0] : null,
   tab: ["ask","all","hist"].find((x) => !$("#view-" + x).hidden),
 }));
 window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
