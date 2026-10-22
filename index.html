@@ -203,8 +203,8 @@ footer { margin-top: 48px; font-size: 14px; color: var(--ink-2); }
   .next { grid-template-columns: 1fr; }
   .coin { width: 54px; height: 54px; }
   .tip { flex-direction: column; gap: 2px; }
-  .chips { gap: 6px; }
-  .chip { padding: 4px 10px; font-size: 15px; }
+  .chips { gap: 5px; }
+  .chip { padding: 4px 8px; font-size: 14.5px; }
   .pick { grid-template-columns: 36px 1fr; gap: 8px; }
   .name { font-size: 30px; }
 }
@@ -460,6 +460,8 @@ function sigHTML(n, note) {
 const PERIODS = [
   { id:"day", label:"오늘", tip:"오늘 해볼 일", ahead:"오늘 안에", again:"같은 질문은 내일이나 상황이 바뀐 뒤에 다시 물어보세요.",
     frame:"오늘 하루의 분위기로 읽으세요. 오늘의 작은 선택과 말, 태도에 적용하면 됩니다." },
+  { id:"tomorrow", label:"내일", tip:"내일을 위해 오늘 해볼 일", ahead:"내일 안에", again:"같은 질문은 내일이 지나거나 상황이 바뀐 뒤에 다시 물어보세요.",
+    frame:"내일 하루의 분위기로 읽으세요. 내일 있을 일정, 만남, 결정을 미리 준비하는 데 쓰세요." },
   { id:"week", label:"이번 주", tip:"이번 주를 위해 오늘 해볼 일", ahead:"이번 주 안에", again:"같은 질문은 다음 주나 상황이 바뀐 뒤에 다시 물어보세요.",
     frame:"이번 주의 흐름으로 읽으세요. 이번 주에 정할 일, 만날 사람, 일정의 속도에 적용하세요." },
   { id:"month", label:"이번 달", tip:"이번 달을 위해 오늘 해볼 일", ahead:"이번 달 안에", again:"같은 질문은 다음 달이나 상황이 바뀐 뒤에 다시 물어보세요.",
